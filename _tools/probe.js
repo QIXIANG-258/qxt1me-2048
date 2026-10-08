@@ -679,9 +679,20 @@ async function main() {
   }
 
   // ── ⑫ 触摸滑动（移动端主路径） ──────────────────
+  /* 🔴 关键（2026-10-08 实测定位）：**`setDeviceMetricsOverride({mobile:true})`
+     并不会打开触摸模拟** —— 实测之后 `'ontouchstart' in window === false`、
+     `navigator.maxTouchPoints === 0`，页面里那套 touch 监听根本不会挂上，
+     合成出来的 touchStart/Move/End 自然推不动方块。
+     必须**另外**调 `Emulation.setTouchEmulationEnabled` 才会把
+     `maxTouchPoints` 变成 5、`ontouchstart` 变成 true。
+     （这条之前只在 localhost 上侥幸通过 —— 那是「重试输入」也救不了的假红，
+       因为再怎么重试，环境本身没有触摸能力。） */
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
-  await sleep(500);
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+  await sleep(600);
   const touchOn = await ev("'ontouchstart' in window || navigator.maxTouchPoints > 0");
+  ok(touchOn === true, "移动端模拟下触摸能力已开启（ontouchstart / maxTouchPoints）",
+     "touchOn=" + touchOn + " —— 没开的话下面的滑动必假红");
   const mBox = await ev(`(function(){ var r = document.getElementById('board').getBoundingClientRect();
     return {x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2)}; })()`);
   const touchRes = await retryUntilChanged(async () => {
@@ -694,6 +705,9 @@ async function main() {
   }, 3);
   ok(touchRes.changed, "触摸滑动能移动方块（移动端主路径）",
     "3 次尝试局面都未变（touch 可用=" + touchOn + "，滑动起点 " + JSON.stringify(mBox) + "）");
+  /* 触摸模拟也要一起关掉，否则会泄漏到后面的用例
+     （后续若有用例依赖「非触摸设备」的鼠标路径，开着触摸会改变事件走向）。 */
+  await send("Emulation.setTouchEmulationEnabled", { enabled: false });
   await send("Emulation.clearDeviceMetricsOverride");
 
   // ── ⑬ 键盘功能键：R 重开 / C 撤销 ────────────────
