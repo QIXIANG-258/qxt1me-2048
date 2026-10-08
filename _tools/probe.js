@@ -342,6 +342,47 @@ async function main() {
   ok(/rel=["']apple-touch-icon["']/.test(headHtml), "HTML <link rel='apple-touch-icon'> 存在");
   ok(/rel=["']manifest["']/.test(headHtml), "HTML <link rel='manifest'> 存在");
 
+  // ── ②c robots.txt / sitemap.xml（2026-10-08 补）──────────────────
+  // 此前线上两个路径都是 404（blog 与 gear 都已补，本站漏了）。
+  // ⚠️ 判据不能只看「200」—— 内容也要对：robots 要 Allow 且声明 Sitemap，
+  //    sitemap 要含本站唯一 URL。只看状态码的话，一个空的 200 也能骗过去。
+  // ⚠️ 走**页面内** fetch（同上面 favicon 套件）：沙箱里 node fetch 没接
+  //    Edge 的 --proxy-server，打远程地址会 ECONNRESET。
+  {
+    const meta = await ev(`(async function(){
+      var out = {};
+      for (var u of ['/robots.txt','/sitemap.xml']) {
+        try {
+          var r = await fetch(location.origin + u);
+          out[u] = { status: r.status, body: r.status === 200 ? await r.text() : null };
+        } catch (e) { out[u] = { error: String(e) }; }
+      }
+      return out;
+    })()`);
+    const rob = meta["/robots.txt"] || {};
+    const sm = meta["/sitemap.xml"] || {};
+
+    ok(rob.status === 200, "robots.txt 200", "status=" + rob.status + " " + (rob.error || ""));
+    const rt = rob.body || "";
+    ok(/User-agent:\s*\*/i.test(rt), "robots.txt 有 User-agent: *");
+    ok(/Allow:\s*\//i.test(rt), "robots.txt 允许抓取（Allow: /）");
+    ok(!/^\s*Disallow:\s*\/\s*$/im.test(rt), "robots.txt 没有 Disallow: /（否则整站被挡）");
+    ok(/Sitemap:\s*https:\/\/2048\.qxt1me\.dpdns\.org\/sitemap\.xml/.test(rt),
+       "robots.txt 声明了本站的 sitemap（绝对 https 地址）",
+       JSON.stringify(rt.replace(/\s+/g, " ").slice(0, 100)));
+
+    ok(sm.status === 200, "sitemap.xml 200", "status=" + sm.status + " " + (sm.error || ""));
+    const st = sm.body || "";
+    ok(/<urlset\b/.test(st) && /sitemaps\.org\/schemas\/sitemap\/0\.9/.test(st),
+       "sitemap.xml 是合法 urlset（标准命名空间）");
+    ok(/<loc>https:\/\/2048\.qxt1me\.dpdns\.org\/<\/loc>/.test(st),
+       "sitemap.xml 含本站唯一 URL（单页站只应有 1 条）",
+       "loc 条数=" + (st.match(/<loc>/g) || []).length);
+    ok((st.match(/<loc>/g) || []).length === 1,
+       "sitemap.xml 恰好 1 条 loc（单页站不该列不存在的路径）",
+       "实测 " + (st.match(/<loc>/g) || []).length + " 条");
+  }
+
   // ── ②b 配色可辨性（2026-10-07 加）────────────────
   // 🔴 起因：作者反馈"方块容易和背景融为一体"。实测根因是数值 2 的
   //    底色 rgb(33,33,33) 与空格 rgb(32,32,32) 几乎同色，而 2 是棋盘上

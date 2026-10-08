@@ -1,0 +1,7 @@
+# 憩想 · 2048 小游戏 —— https://2048.qxt1me.dpdns.org/
+# 单页静态站，没有需要挡住的私有视图（没有 ?owner=1 之类的作者态），全站可抓。
+# 2026-10-08 补 —— 此前线上 404（blog 与 gear 都已补，本站漏了）。
+User-agent: *
+Allow: /
+
+Sitemap: https://2048.qxt1me.dpdns.org/sitemap.xml

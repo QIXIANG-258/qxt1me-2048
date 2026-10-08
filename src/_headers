@@ -54,3 +54,17 @@
   Cache-Control: public, max-age=3600
   # manifest 的正确 MIME —— 缺失时部分浏览器直接忽略整个 manifest
   Content-Type: application/manifest+json
+
+# robots.txt / sitemap.xml（2026-10-08 补）—— 此前线上两个路径都是 404
+# （blog 与 gear 都已补，本站漏了）。
+# 为什么是 3600 而不是 immutable：两个文件**会原地改内容**（改域名、改 lastmod、
+# 以后加规则），文件名没有内容指纹 —— 给 immutable 等于让爬虫一年看不到新版本。
+# 也不跟 /css/* 、/js/* 走 300s：它们不是「改版要立刻刷掉」的界面资源，
+# 一小时足够跟手，又能省掉每次爬取的回源。与 blog / gear 的同名规则同口径。
+# ⚠️ 两条精确路径，与上面 /favicon.ico、/icon-*.png、/manifest.webmanifest
+#    以及 /css/*、/js/*、/fonts/*.woff2 全都不重叠；/* 兜底段照旧只放安全头。
+/robots.txt
+  Cache-Control: public, max-age=3600
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600

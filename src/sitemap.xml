@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 憩想 · 2048 是单页站：游戏状态走 localStorage，
+     没有可深链的局面 URL，真正可索引的 URL 只有一个，所以只写一条 url。
+     2026-10-08 补 —— 此前线上 404。 -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://2048.qxt1me.dpdns.org/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+</urlset>
