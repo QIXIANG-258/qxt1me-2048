@@ -1,0 +1,13 @@
+{
+  "name": "qxt1me-2048",
+  "private": true,
+  "description": "2048 — 憩想站群的小游戏模块：纯静态、零依赖、与 universe/gear 同一套配色令牌。",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "dry": "wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "^4.147.0"
+  }
+}

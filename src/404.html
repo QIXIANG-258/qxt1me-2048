@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>404 · 2048</title>
+    <script>
+      try {
+        var _t = localStorage.getItem("g2048Theme");
+        if (_t === "light") document.documentElement.setAttribute("data-theme", "light");
+      } catch (e) {}
+    </script>
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <main class="wrap">
+      <div class="nf">
+        <div class="nf-code">404</div>
+        <p class="nf-text" data-zh="这一页不存在。" data-en="This page doesn't exist.">这一页不存在。</p>
+        <a class="btn btn-primary" href="/" data-zh="回到 2048" data-en="Back to 2048">回到 2048</a>
+      </div>
+    </main>
+    <script src="js/app.js"></script>
+  </body>
+</html>

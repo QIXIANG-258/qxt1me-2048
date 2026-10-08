@@ -1,0 +1,56 @@
+# 响应头（Workers assets 语法，同 Pages）。
+#
+# 照抄 universe / gear 的家族设计，本站同样遵守两条铁律：
+#   ① 各规则的路径集合**互不重叠** —— Cloudflare 会把命中规则的值**拼接**
+#      在一起，而浏览器只认第一个，长缓存会被静默吃掉。
+#   ② /* 兜底段**只放安全头、绝不放 Cache-Control** —— 否则它会把下面每一条
+#      精细缓存规则都吃掉（正是 ① 那个坑）。
+#
+# 本站路径前缀与 universe 一致：/css/*、/js/*、/fonts/*。
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# ↓ 以下是缓存策略，规则之间互不重叠
+
+# 字体（5 片 woff2，约 965 KB）。
+# 敢给一年：文件名是**语义名**（qx-serif-*-core / -rest / great-vibes），
+# 内容是已切好的字形分片，不会原地变；换字体必然是改 CSS 里的引用。
+# ⚠️ 用 *.woff2 而不是 /fonts/* —— 精确到扩展名可避免以后往那个目录
+#    放 CSS/JSON 时被误伤（gear 就是栽在这上面的）。
+/fonts/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# css/js：文件名固定，且 index.html 是**裸引用**（不带 ?v= 指纹），
+# 所以不能用 immutable（否则改版后访客永远刷不掉），给 300s：
+# 作者改完刷新几次就能看到，代价只是一天几次的 304 协商。
+/css/*
+  Cache-Control: public, max-age=300
+
+/js/*
+  Cache-Control: public, max-age=300
+
+# 说明：index.html / 404.html 故意**不写规则** ——
+# 它们落 Cloudflare 默认的 `public, max-age=0, must-revalidate`，
+# 即「每次回源校验」，这正是 HTML 想要的语义（改版立刻生效）。
+
+# 站点图标（2026-10-08）—— 根目录，原先无规则命中会每次回源。
+# 不能 immutable：图标会随换标而变，且文件名不带内容指纹。
+# 给 7 天：换标后最多一周生效，平时不再反复回源。
+/favicon.ico
+  Cache-Control: public, max-age=604800
+
+/icon-*.png
+  Cache-Control: public, max-age=604800
+
+# manifest（2026-10-08）—— 同样在根目录、同样无指纹。
+# 它比图标更该短一些：manifest 里改了 start_url / 主题色等内容，
+# 若被长时间缓存，用户装了「添加到主屏幕」后行为不对且难排查。
+# 给 1 小时。
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+  # manifest 的正确 MIME —— 缺失时部分浏览器直接忽略整个 manifest
+  Content-Type: application/manifest+json

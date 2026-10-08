@@ -1,0 +1,24 @@
+# 探针截图产物（与 02-universe / 03-gear 同一约定：只在本机，不进 Git）
+_shots/
+
+# 本地杂项
+node_modules/
+.wrangler/
+dist/
+*.log
+
+# 改动前的本地备份（产过 .bak / .bak2）
+*.bak
+*.bak[0-9]
+*.orig
+
+# 提交信息临时文件（别的仓库写错过一次，加规则防复发）
+_commit_msg.txt
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

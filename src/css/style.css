@@ -1,0 +1,740 @@
+/* =========================================================
+   2048 · 憩想站群小游戏
+   配色令牌沿用 universe / gear 那一套（RGB 三元组写法，
+   便于 rgba(var(--x-rgb), .05) 做低透明度叠色）。
+   家族铁律：界面零彩度，数字方块从「中性灰」随数值缓缓
+   升温到「黄铜 / 金」，把彩度留给数值本身。
+   ========================================================= */
+
+:root {
+  /* 页底 ← blog --bg(#0f0f0f)；卡片 ← blog --card(#181818) */
+  --bg-rgb: 15, 15, 15;
+  --card-rgb: 24, 24, 24;
+  --card-2-rgb: 33, 33, 33;
+
+  --ink-rgb: 242, 241, 237;     /* 主文字 ← blog --ink    */
+  --ink-2-rgb: 181, 180, 174;   /* 次级   ← blog --ink-2  */
+  --ink-3-rgb: 130, 129, 122;   /* 弱     ← blog --ink-3  */
+
+  /* 发丝线 */
+  --line-rgb: 255, 255, 255;
+
+  /* 反色（选中 / 主按钮）← blog --hl / --hl-ink */
+  --hl-rgb: 242, 241, 237;
+  --hl-ink-rgb: 15, 15, 15;
+
+  /* 数值方块的暖色端点：2/4 是中性，2048 是金 */
+  --warm-1-rgb: 58, 56, 52;
+  --warm-2-rgb: 92, 78, 62;
+  --warm-3-rgb: 133, 104, 70;
+  --warm-4-rgb: 176, 134, 78;
+  --warm-5-rgb: 205, 160, 88;
+  --warm-6-rgb: 226, 186, 106;
+
+  /* ── 方块色阶（2026-10-07 重做）─────────────────────
+     🔴 旧版把 2 设成 --card-2-rgb(33,33,33)，而空格子实测 ≈ (32,32,32)
+        —— **2 和空格几乎同色**，2 又是棋盘上最多的方块，于是整盘糊成一片。
+     新色阶的两条硬约束：
+       ① 每个数值都必须与「空格」和「相邻数值」都有可辨的明度差；
+       ② 文字与方块底色的对比度 ≥ 3:1（探针守着，见 _tools/probe.js）。
+     深色主题下：2 起就明显亮于空格，越高越暖越亮，2048 是最亮的金。 */
+  --t2-rgb: 78, 76, 70;
+  --t4-rgb: 100, 92, 78;
+  --t8-rgb: 128, 108, 78;
+  --t16-rgb: 158, 130, 82;
+  --t32-rgb: 180, 148, 88;
+  --t64-rgb: 196, 162, 94;
+  --t128-rgb: 210, 176, 100;
+  --t256-rgb: 220, 188, 108;
+  --t512-rgb: 228, 198, 118;
+  --t1024-rgb: 236, 208, 128;
+  --t2048-rgb: 244, 220, 145;
+
+  /* 方块上的数字：低数值配浅字，高数值（底已很亮）配深字。
+     切换点在 16/32 之间 —— 这两档是唯一两种字色都仍 ≥3:1 的区间。 */
+  --tile-ink-light-rgb: 250, 247, 241;
+  --tile-ink-dark-rgb: 28, 22, 14;
+
+  /* 方块描边：让实体方块从「凹槽」里浮出来 */
+  --tile-edge: rgba(255, 255, 255, .10);
+
+  --r: 5px;
+  --r-sm: 4px;
+
+  --shadow: 0 18px 44px -22px rgba(0, 0, 0, .85);
+  --shadow-rest: 0 10px 26px -16px rgba(0, 0, 0, .6);
+
+  --max: 1180px;
+  --pad: clamp(16px, 4vw, 40px);
+
+  --f-cn: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  --f-serif: Georgia, "Times New Roman", "Songti SC", "STSong", serif;
+  --f-serif-d: "QX Serif", "Songti SC", "STSong", "SimSun", serif;
+
+  --ease: cubic-bezier(.22, .61, .36, 1);
+
+  /* 棋盘几何：背景与建议值的间距 —— 真正的 px 由 JS 在 boot/resize
+     时测量棋盘内框算好，写进 --cell-px / --step，避免 CSS calc(100%)
+     在不同包含块上的歧义。 */
+  --board-pad: clamp(8px, 2.2vw, 12px);
+  --board-gap: clamp(8px, 2.2vw, 12px);
+  --n: 4;
+
+  /* 滑动时长：与 js/app.js 的 SLIDE_MS 保持一致
+   （2026-10-07：110ms → 200ms，作者嫌太快看不清方块怎么走） */
+  --slide: 200ms;
+  /* 合并弹跳：比滑动略长一点，收尾时刚好接住 */
+  --merge: 340ms;
+  /* 新方块落下的时长 */
+  --appear: 300ms;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-rgb: 240, 238, 234;      /* ← blog --bg     #f0eeea */
+  --card-rgb: 251, 250, 248;    /* ← blog --card   #fbfaf8 */
+  --card-2-rgb: 227, 224, 217;  /* ← blog --card-2 #e3e0d9 */
+
+  --ink-rgb: 22, 22, 22;
+  --ink-2-rgb: 92, 91, 86;
+  --ink-3-rgb: 104, 103, 95;
+
+  --line-rgb: 0, 0, 0;
+
+  --hl-rgb: 22, 22, 22;
+  --hl-ink-rgb: 251, 250, 248;
+
+  /* 浅色下数值方块反过来：低数值**深**于空格、高数值继续加深变饱和。
+     ⚠️ 旧版把 2 设成 232,229,223 而空格 ≈ 227,224,217 —— 同样几乎同色，
+        浅色下糊得更厉害（浅色里明度差本来就更难分辨）。
+     新规则：2 起就明显深于空格，一路加深，字色全程用浅色。 */
+  --t2-rgb: 206, 201, 192;
+  --t4-rgb: 195, 186, 172;
+  --t8-rgb: 201, 178, 148;
+  --t16-rgb: 205, 172, 128;
+  --t32-rgb: 200, 158, 104;
+  --t64-rgb: 190, 143, 84;
+  --t128-rgb: 178, 128, 68;
+  --t256-rgb: 166, 114, 54;
+  --t512-rgb: 152, 99, 42;
+  --t1024-rgb: 136, 85, 34;
+  --t2048-rgb: 120, 72, 26;
+
+  /* 浅色下所有方块都用**深色字**（底色最深是 120,72,26，配浅字仍 ≥3:1） */
+  --tile-ink-light-rgb: 255, 253, 250;
+  --tile-ink-dark-rgb: 38, 27, 16;
+
+  /* 浅色下描边用深色（凹槽感来自"比纸面深一点的边"） */
+  --tile-edge: rgba(60, 48, 32, .18);
+
+  --shadow: 0 18px 44px -26px rgba(60, 50, 35, .35);
+  --shadow-rest: 0 10px 26px -20px rgba(60, 50, 35, .28);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: rgb(var(--bg-rgb));
+  color: rgb(var(--ink-rgb));
+  font-family: var(--f-cn);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* 环境光：两层极淡的暖雾，缓慢漂移。纯装饰，pointer-events 关掉。 */
+.ambient {
+  position: fixed;
+  inset: -20vmax;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38vmax 38vmax at 22% 18%, rgba(var(--warm-4-rgb), .10), transparent 68%),
+    radial-gradient(30vmax 30vmax at 82% 78%, rgba(var(--warm-2-rgb), .12), transparent 70%);
+  filter: blur(6px);
+  animation: drift 34s var(--ease) infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+  to   { transform: translate3d(1.5%, 1.5%, 0) scale(1.06); }
+}
+
+a { color: inherit; text-decoration: none; }
+
+.ico { display: inline-flex; width: 16px; height: 16px; }
+.ico svg {
+  width: 100%; height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── 顶栏 ─────────────────────────────────────────── */
+.topbar {
+  position: relative;
+  z-index: 1;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(14px, 3vw, 26px) var(--pad) 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgb(var(--ink-3-rgb));
+  font-size: 12px;
+  letter-spacing: .06em;
+  padding: 6px 10px 6px 6px;
+  border-radius: var(--r);
+  transition: color .25s var(--ease), background-color .25s var(--ease);
+}
+.back:hover { color: rgb(var(--ink-rgb)); background: rgba(var(--line-rgb), .05); }
+
+.brand { text-align: center; }
+
+.title {
+  margin: 0;
+  font-family: var(--f-serif-d);
+  font-weight: 600;
+  font-size: clamp(30px, 7vw, 44px);
+  letter-spacing: .1em;
+  line-height: 1;
+}
+
+.sub {
+  margin: 6px 0 0;
+  font-size: 11px;
+  letter-spacing: .22em;
+  color: rgb(var(--ink-3-rgb));
+  text-transform: uppercase;
+}
+
+.tools { justify-self: end; display: flex; gap: 8px; }
+
+.tool-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(var(--line-rgb), .04);
+  border: 1px solid rgba(var(--line-rgb), .1);
+  border-radius: var(--r);
+  color: rgb(var(--ink-2-rgb));
+  font-family: var(--f-cn);
+  font-size: 12px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: color .25s var(--ease), background-color .25s var(--ease), border-color .25s var(--ease), transform .18s var(--ease);
+}
+.tool-btn:hover { color: rgb(var(--ink-rgb)); background: rgba(var(--line-rgb), .09); }
+.tool-btn:active { transform: translateY(1px); }
+.tool-btn[aria-pressed="true"] { color: rgb(var(--ink-rgb)); border-color: rgba(var(--line-rgb), .28); }
+
+:where(a, button, summary, input):focus-visible {
+  outline: 1px solid rgba(var(--hl-rgb), .7);
+  outline-offset: 2px;
+}
+
+/* ── 版心 ─────────────────────────────────────────── */
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(18px, 4vw, 34px) var(--pad) clamp(28px, 5vw, 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── 分数条 ───────────────────────────────────────── */
+.hud {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: clamp(14px, 3vw, 22px);
+}
+
+.scores { display: flex; gap: 10px; }
+
+.score-box {
+  position: relative;
+  min-width: 92px;
+  padding: 8px 14px 9px;
+  background: rgb(var(--card-rgb));
+  border: 1px solid rgba(var(--line-rgb), .07);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-rest);
+}
+.score-box-alt { background: rgba(var(--line-rgb), .03); box-shadow: none; }
+
+.score-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .18em;
+  color: rgb(var(--ink-3-rgb));
+  text-transform: uppercase;
+}
+
+.score-value {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--f-serif-d);
+  font-weight: 600;
+  font-size: clamp(20px, 5vw, 26px);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+/* +N 飘字：分数增长时从分数框里浮起再淡掉 */
+.score-float {
+  position: absolute;
+  right: 12px;
+  top: 2px;
+  font-family: var(--f-serif-d);
+  font-size: 14px;
+  color: rgb(var(--warm-5-rgb));
+  opacity: 0;
+  pointer-events: none;
+}
+.score-float.run { animation: floatUp 900ms var(--ease) 1; }
+@keyframes floatUp {
+  0%   { opacity: 0; transform: translateY(6px); }
+  18%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
+
+.actions { display: flex; gap: 8px; }
+
+.btn {
+  height: 36px;
+  padding: 0 15px;
+  background: rgba(var(--line-rgb), .04);
+  border: 1px solid rgba(var(--line-rgb), .12);
+  border-radius: var(--r);
+  color: rgb(var(--ink-2-rgb));
+  font-family: var(--f-cn);
+  font-size: 13px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: color .25s var(--ease), background-color .25s var(--ease), border-color .25s var(--ease), transform .18s var(--ease), opacity .25s var(--ease);
+}
+.btn:hover:not(:disabled) { color: rgb(var(--ink-rgb)); background: rgba(var(--line-rgb), .09); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .38; cursor: default; }
+
+.btn-primary {
+  background: rgb(var(--hl-rgb));
+  border-color: rgb(var(--hl-rgb));
+  color: rgb(var(--hl-ink-rgb));
+}
+.btn-primary:hover:not(:disabled) { background: rgba(var(--hl-rgb), .86); color: rgb(var(--hl-ink-rgb)); }
+
+/* ── 棋盘 ─────────────────────────────────────────── */
+.stage { width: 100%; display: flex; justify-content: center; }
+
+.board {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  aspect-ratio: 1 / 1;
+  background: rgb(var(--card-rgb));
+  border: 1px solid rgba(var(--line-rgb), .07);
+  border-radius: calc(var(--r) + 3px);
+  box-shadow: var(--shadow);
+  /* 手指滑动时不要把页面一起拖走 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 静止的 16 个底格 */
+.cells {
+  position: absolute;
+  inset: 0;
+  padding: var(--board-pad);
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  grid-template-rows: repeat(var(--n), 1fr);
+  gap: var(--board-gap);
+}
+.cell {
+  background: rgba(var(--line-rgb), .035);
+  border-radius: var(--r-sm);
+}
+
+/* 方块层：绝对定位容器 —— .tile 的大小由 JS 在 boot 时根据棋盘内框算好
+   写进内联 --cell-px / --step（每格 + gap 的实际 px），CSS 不再做量算。
+   这是为了避开 var(--cell) 里 100% 的含块歧义（不同包含块上 100% 算
+   出来不一样，方块宽 100 但格间距 112 → 全部跑位）。
+   ⚠️ padding 必须与 .cells 完全一致 —— 否则 .tile 的 transform 起点
+   会向左/上偏一个 padding（实测偏 12 = 一个 --board-pad）。 */
+.tiles {
+  position: absolute;
+  inset: 0;
+  padding: var(--board-pad);
+}
+
+/* ── 方块分两层（2026-10-08，根治瞬移）──────────────
+   .tile       = **位移层**：只做 translate3d + transition，绝不放动画
+   .tile-inner = **缩放层**：背景/描边/数字/弹跳动画全在这层
+
+   🔴 为什么必须分两层：CSS 里 animation 设置的 transform 会**整体替换**
+      元素的 transform 属性（不是叠加）。以前把 scale 动画写在 .tile 上，
+      动画一播，translate3d 就被吞掉 → 方块瞬间回到原点再弹回，
+      实测单帧跳 111.5px（正好一格），就是肉眼看到的"瞬移"。
+      分层之后两者各管一个 transform，物理上不可能再互相覆盖。
+   ⚠️ 以后任何"弹跳/呼吸"动画都只能加在 .tile-inner 上。 */
+.tile {
+  position: absolute;
+  width: var(--cell-px);
+  height: var(--cell-px);
+  transform: translate3d(
+    calc(var(--x) * var(--step)),
+    calc(var(--y) * var(--step-y)),
+    0
+  );
+  transition: transform var(--slide) var(--ease);
+  will-change: transform;
+}
+
+.tile-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  font-family: var(--f-serif-d);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+  transform: scale(1);
+  transform-origin: center;
+  transition: background-color 300ms var(--ease), color 300ms var(--ease), box-shadow 300ms var(--ease);
+  will-change: transform;
+}
+
+.tile-face {
+  display: block;
+  font-size: var(--fs, clamp(26px, 7.2vw, 40px));
+  line-height: 1;
+}
+
+/* 数值 → 色阶。── 见上面 --t2..--t2048 的两条硬约束。
+   每个方块都有 1px 描边 + 极轻投影，让它从空格（凹槽）里**浮出来**——
+   这是"融为一体"最直接的对策：光靠底色不够，还得有边界。
+   ⚠️ 全部作用在 .tile-inner（缩放层），不是 .tile（位移层）。 */
+.tile[data-v="2"]    .tile-inner { background: rgb(var(--t2-rgb));   color: rgb(var(--tile-ink-light-rgb)); }
+.tile[data-v="4"]    .tile-inner { background: rgb(var(--t4-rgb));   color: rgb(var(--tile-ink-light-rgb)); }
+.tile[data-v="8"]    .tile-inner { background: rgb(var(--t8-rgb));   color: rgb(var(--tile-ink-light-rgb)); }
+.tile[data-v="16"]   .tile-inner { background: rgb(var(--t16-rgb));  color: rgb(var(--tile-ink-light-rgb)); }
+.tile[data-v="32"]   .tile-inner { background: rgb(var(--t32-rgb));  color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="64"]   .tile-inner { background: rgb(var(--t64-rgb));  color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="128"]  .tile-inner { background: rgb(var(--t128-rgb)); color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="256"]  .tile-inner { background: rgb(var(--t256-rgb)); color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="512"]  .tile-inner { background: rgb(var(--t512-rgb)); color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="1024"] .tile-inner { background: rgb(var(--t1024-rgb)); color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="2048"] .tile-inner { background: rgb(var(--t2048-rgb)); color: rgb(var(--tile-ink-dark-rgb)); }
+.tile[data-v="4096"] .tile-inner,
+.tile[data-v="8192"] .tile-inner,
+.tile[data-v="16384"] .tile-inner {
+  background: rgb(var(--hl-rgb)); color: rgb(var(--hl-ink-rgb));
+}
+/* 兜底：万一叠到更高，仍走最高档 */
+.tile[data-v]:not([data-v="2"]):not([data-v="4"]):not([data-v="8"]):not([data-v="16"]):not([data-v="32"]):not([data-v="64"]):not([data-v="128"]):not([data-v="256"]):not([data-v="512"]):not([data-v="1024"]):not([data-v="2048"]):not([data-v="4096"]):not([data-v="8192"]):not([data-v="16384"]) .tile-inner {
+  background: rgb(var(--hl-rgb)); color: rgb(var(--hl-ink-rgb));
+}
+
+/* 所有数值方块共用的立体感：描边 + 微投影 + 顶部高光。
+   ⚠️ 用 box-shadow 而不是 border —— border 会改变盒子尺寸，
+      而格子尺寸是 JS 量好写死的，加 border 会挤爆布局。
+   ⚠️ 挂在 .tile-inner 上（缩放层），跟着弹跳一起缩放。 */
+.tile-inner {
+  box-shadow:
+    inset 0 0 0 1px var(--tile-edge),
+    inset 0 1px 0 rgba(255, 255, 255, .06),
+    0 2px 6px -2px rgba(0, 0, 0, .55);
+}
+/* 越大的方块越"发光"：128 起步，到 2048 最亮 */
+.tile[data-v="128"] .tile-inner  { box-shadow: inset 0 0 0 1px var(--tile-edge), inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px -2px rgba(0,0,0,.55), 0 0 14px -6px rgba(var(--t128-rgb), .55); }
+.tile[data-v="256"] .tile-inner  { box-shadow: inset 0 0 0 1px var(--tile-edge), inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px -2px rgba(0,0,0,.55), 0 0 16px -6px rgba(var(--t256-rgb), .6); }
+.tile[data-v="512"] .tile-inner  { box-shadow: inset 0 0 0 1px var(--tile-edge), inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px -2px rgba(0,0,0,.55), 0 0 20px -6px rgba(var(--t512-rgb), .65); }
+.tile[data-v="1024"] .tile-inner { box-shadow: inset 0 0 0 1px var(--tile-edge), inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px -2px rgba(0,0,0,.55), 0 0 24px -4px rgba(var(--t1024-rgb), .75); }
+.tile[data-v="2048"] .tile-inner { box-shadow: inset 0 0 0 1px rgba(255,255,255,.32), inset 0 1px 0 rgba(255,255,255,.12), 0 2px 8px -2px rgba(0,0,0,.5), 0 0 30px -2px rgba(var(--t2048-rgb), .85); }
+
+/* 字多就缩小，别撑破格子 */
+.tile[data-len="3"] .tile-face { --fs: clamp(22px, 6vw, 34px); }
+.tile[data-len="4"] .tile-face { --fs: clamp(18px, 5vw, 27px); }
+.tile[data-len="5"] .tile-face { --fs: clamp(15px, 4vw, 22px); }
+
+/* 浅色主题的字色：**不是全程深字**。
+     底色一路加深到 2048（L≈0.087，已经很暗），继续用深字只有 2.2:1 ——
+     实测不及格（见 _tools/check_contrast.js）。所以分两段：
+       2~512  底色仍偏浅 → 深字
+       1024/2048 底色已深 → 改浅字
+     切换点由实测定，别凭感觉挪。 */
+html[data-theme="light"] .tile[data-v="2"] .tile-inner,
+html[data-theme="light"] .tile[data-v="4"] .tile-inner,
+html[data-theme="light"] .tile[data-v="8"] .tile-inner,
+html[data-theme="light"] .tile[data-v="16"] .tile-inner,
+html[data-theme="light"] .tile[data-v="32"] .tile-inner,
+html[data-theme="light"] .tile[data-v="64"] .tile-inner,
+html[data-theme="light"] .tile[data-v="128"] .tile-inner,
+html[data-theme="light"] .tile[data-v="256"] .tile-inner,
+html[data-theme="light"] .tile[data-v="512"] .tile-inner { color: rgb(var(--tile-ink-dark-rgb)); }
+
+html[data-theme="light"] .tile[data-v="1024"] .tile-inner,
+html[data-theme="light"] .tile[data-v="2048"] .tile-inner,
+html[data-theme="light"] .tile[data-v="4096"] .tile-inner,
+html[data-theme="light"] .tile[data-v="8192"] .tile-inner,
+html[data-theme="light"] .tile[data-v="16384"] .tile-inner { color: rgb(var(--tile-ink-light-rgb)); }
+
+/* 浅色下"发光"改成"下压的实影"——浅底上光晕看不见，反而显脏 */
+html[data-theme="light"] .tile .tile-inner {
+  box-shadow:
+    inset 0 0 0 1px var(--tile-edge),
+    0 2px 5px -2px rgba(60, 48, 32, .28);
+}
+html[data-theme="light"] .tile[data-v="1024"] .tile-inner,
+html[data-theme="light"] .tile[data-v="2048"] .tile-inner {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .28),
+    0 3px 8px -2px rgba(60, 48, 32, .4);
+}
+
+/* ── 动画：只做缩放，绝对不碰位移 ───────────────────
+   🔴🔴 这是"瞬移"bug 的根治处（2026-10-08）。
+   旧写法把 translate3d(calc(var(--x) * var(--step)), …) 写进了 @keyframes
+   的每一帧 —— CSS 里 **animation 的优先级高于 transition**，动画播放期间
+   改 --x 会让方块**直接跳到新位置**，滑动过渡被完全覆盖。
+   实测：新方块落下动画(300ms)期间按下一个方向，单帧跳 143.9px；
+        合并动画(340ms)期间再按一次，单帧跳 **334.5px**（一格才 111px）。
+   修法：keyframes 里**只留 scale**，位移永远交给元素自身的 transform +
+        transition。两者互不干扰，快速连按也不会跳。
+   ⚠️ 以后往 @keyframes 里加任何位移，都会把这个 bug 原样带回来。
+       判据见 _tools/probe_teleport.js（逐帧采样单帧位移）。 */
+
+/* 新方块落下：从 0 缩放弹出，带一点回弹（overshoot）
+   ⚠️ 挂在 .tile-inner 上：动画的 transform:scale 会**替换**元素自身的
+      transform，若挂在位移层 .tile 上会把 translate3d 一起吞掉 → 瞬移。 */
+.tile.tile-new .tile-inner { animation: popIn var(--appear) var(--ease) 1 both; }
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(.2); }
+  55%  { opacity: 1; transform: scale(1.12); }
+  75%  { transform: scale(.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 合并：先蓄力微缩 → 弹到最大 → 回落过冲 → 归位。
+   比单向"胀一下"更有"啪"的手感；同时叠一道向外扩散的光环。 */
+.tile.tile-merge { z-index: 3; }
+.tile.tile-merge .tile-inner { animation: popMerge var(--merge) var(--ease) 1 both; }
+@keyframes popMerge {
+  0%   { transform: scale(.92); }
+  30%  { transform: scale(1.20); }
+  55%  { transform: scale(.97); }
+  78%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* 合并时向外扩散的一圈光环 —— 纯装饰，不参与命中测试 */
+.tile.tile-merge .tile-inner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid rgba(255, 255, 255, .55);
+  pointer-events: none;
+  animation: mergeRing var(--merge) var(--ease) 1 both;
+}
+@keyframes mergeRing {
+  0%   { opacity: .85; transform: scale(.85); }
+  70%  { opacity: .18; }
+  100% { opacity: 0;   transform: scale(1.5); }
+}
+
+/* 达成 2048 的那一格，缓缓呼吸 */
+.tile.tile-win { animation: breathe 2.6s var(--ease) infinite; }
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 34px -4px rgba(var(--warm-6-rgb), .95), inset 0 0 0 1px rgba(255, 255, 255, .35); }
+  50%      { box-shadow: 0 0 46px 0 rgba(var(--warm-6-rgb), 1),    inset 0 0 0 1px rgba(255, 255, 255, .5); }
+}
+
+/* ── 结束 / 达成浮层 ──────────────────────────────── */
+/* 礼花 canvas（达成里程碑时由 JS 创建、放完自己摘掉）。
+   ⚠️ 必须**高于 .overlay 的 z-index:5**，否则弹窗一起就把礼花挡在后面，
+      看起来像「没放」。取 40：在弹窗之上，又低于任何将来的系统级 UI。
+   pointer-events:none 是必须的 —— 否则满屏 canvas 会吃掉弹窗按钮的点击。 */
+#confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border-radius: calc(var(--r) + 3px);
+  background: rgba(var(--bg-rgb), .62);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  animation: fadeIn 260ms var(--ease) 1 both;
+}
+.overlay[hidden] { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.overlay-card {
+  text-align: center;
+  padding: 22px 20px 20px;
+  max-width: 300px;
+  background: rgb(var(--card-rgb));
+  border: 1px solid rgba(var(--line-rgb), .09);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  animation: cardIn 320ms var(--ease) 1 both;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(10px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.overlay-title {
+  margin: 0;
+  font-family: var(--f-serif-d);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: .04em;
+}
+.overlay-text {
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: rgb(var(--ink-2-rgb));
+}
+.overlay-actions { display: flex; gap: 8px; justify-content: center; }
+
+/* ── 底部文字 ─────────────────────────────────────── */
+.hint {
+  width: 100%;
+  max-width: 460px;
+  margin: clamp(14px, 3vw, 20px) 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgb(var(--ink-3-rgb));
+  letter-spacing: .04em;
+}
+
+/* 第二行：快捷键 / 手柄说明。和 hint 同语同结构，分开显示避免折行 */
+.keys {
+  width: 100%;
+  max-width: 460px;
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: rgb(var(--ink-3-rgb));
+  letter-spacing: .04em;
+  opacity: .78;
+}
+
+.rules {
+  width: 100%;
+  max-width: 460px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(var(--line-rgb), .08);
+  padding-top: 10px;
+}
+.rules summary {
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: .12em;
+  color: rgb(var(--ink-3-rgb));
+  list-style: none;
+}
+.rules summary::-webkit-details-marker { display: none; }
+.rules summary::before { content: "＋ "; }
+.rules[open] summary::before { content: "－ "; }
+.rules p {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: rgb(var(--ink-2-rgb));
+}
+
+.foot {
+  margin-top: clamp(22px, 5vw, 36px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: rgb(var(--ink-3-rgb));
+}
+.foot a:hover { color: rgb(var(--ink-rgb)); }
+.foot .dot { opacity: .5; }
+
+.noscript {
+  position: relative;
+  z-index: 1;
+  padding: 20px var(--pad);
+  text-align: center;
+  color: rgb(var(--ink-2-rgb));
+}
+
+/* ── 404 ──────────────────────────────────────────── */
+.nf { text-align: center; padding: 12vmin 0; }
+.nf-code {
+  font-family: var(--f-serif-d);
+  font-weight: 600;
+  font-size: clamp(56px, 16vw, 96px);
+  letter-spacing: .08em;
+  line-height: 1;
+}
+.nf-text { margin: 12px 0 22px; color: rgb(var(--ink-2-rgb)); font-size: 13px; }
+
+/* ── 无障碍：尊重「减少动态效果」 ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ambient { animation: none; }
+  .tile { transition: none; }
+  .tile.tile-new,
+  .tile.tile-merge,
+  .tile.tile-win,
+  .score-float.run,
+  .overlay,
+  .overlay-card { animation: none; }
+}
+
+/* ── 窄屏 ─────────────────────────────────────────── */
+@media (max-width: 460px) {
+  .hud { flex-direction: column; align-items: stretch; gap: 12px; }
+  .actions { justify-content: space-between; }
+  .actions .btn { flex: 1; }
+  .sub { letter-spacing: .16em; }
+}

@@ -1,0 +1,35 @@
+// Cloudflare Worker 配置 —— 2048 是纯静态资源，没有服务端代码。
+//
+// 与 01-blog 的区别：blog 有 Python 构建管线（依赖本机 7.6 GB 素材，CI 跑不了），
+// 所以 dist_pages/ 是本地构建好、提交进仓库的产物。
+// 本站**没有构建步骤** —— src/ 里就是最终产物，直接部署。
+// 所以这里 assets.directory 指向 ./src，不需要任何 build command。
+//
+// ⚠️ name 必须和 Cloudflare 控制台里的 Worker 名完全一致，否则构建直接失败。
+{
+  "name": "qxt1me-2048",
+  "compatibility_date": "2026-09-27",
+
+  "assets": {
+    "directory": "./src",
+
+    // 找不到路径时用 404.html（与 index.html 同级）。
+    // 不设这条的话，不存在的路径会落到 Cloudflare 的默认英文 404 页。
+    "not_found_handling": "404-page"
+  },
+
+  // 保留 *.workers.dev 地址当预览入口。
+  "workers_dev": true,
+  "preview_urls": true
+
+  // ── 自定义域名 ─────────────────────────────────────────────
+  // 两种做法，二选一（推荐第一种，跟 blog 一样在控制台点）：
+  //
+  // ① 控制台：Worker → 设置 → 域和路由 → 添加 → 自定义域
+  //      填 2048.qxt1me.dpdns.org
+  //
+  // ② 写在这里（注意：控制台里已有同名绑定时，以控制台为准）：
+  // "routes": [
+  //   { "pattern": "2048.qxt1me.dpdns.org", "custom_domain": true }
+  // ]
+}

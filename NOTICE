@@ -1,0 +1,24 @@
+2048 · 憩想站群小游戏
+Copyright (c) 2026 憩想 / QIXIANG-258
+
+本项目的代码以 MIT 许可发布（见 LICENSE）。
+
+── 第三方资源 ──────────────────────────────────────────
+
+本项目自托管以下字体，均来自站群其他模块的同一批文件：
+（02-universe/src/fonts/、03-gear/src/fonts/）
+
+  · Great Vibes      — SIL Open Font License 1.1
+                       Copyright (c) Robert Leuschke
+                       https://fonts.google.com/specimen/Great+Vibes
+
+  · 思源宋体子集     — SIL Open Font License 1.1
+                       Source Han Serif / Noto Serif CJK，Adobe 与 Google 发布
+                       https://github.com/adobe-fonts/source-han-serif
+
+字体文件位于 src/fonts/，src/css/fonts.css 为对应的 @font-face 声明。
+
+── 说明 ────────────────────────────────────────────────
+
+2048 的原玩法由 Gabriele Cirulli 于 2014 年发布（github.com/gabrielecirulli/2048，MIT）。
+本项目的实现是从零编写的独立实现，未使用其代码；界面设计与配色为本站群自定。

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0f0f0f" />
+    <meta name="description" content="2048 — 憩想站群的小游戏：方向键或手指滑动，把相同数字合成 2048。" />
+    <meta name="robots" content="index, follow" />
+    <title>2048 · 憩想</title>
+
+    <!-- 站点图标（2026-10-08）：
+         favicon.ico 多分辨率（16/32/48）；iOS / 安卓「添加到主屏幕」走 apple-touch。
+         manifest.webmanifest 让手机 PWA 安装时也用同一套图。 -->
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- 首帧应用已保存的主题与语言，避免明暗 / 中英切换时闪一下 -->
+    <script>
+      try {
+        var _t = localStorage.getItem("g2048Theme");
+        if (_t === "light") document.documentElement.setAttribute("data-theme", "light");
+        var _l = localStorage.getItem("g2048Lang");
+        if (_l === "en") document.documentElement.setAttribute("lang", "en");
+      } catch (e) {}
+    </script>
+
+    <!-- 自托管字体声明（与 universe/gear 同一批 woff2，勿手改） -->
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="back" href="https://universe.qxt1me.dpdns.org" aria-label="返回站群入口">
+        <i class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></i>
+        <span data-zh="站群" data-en="Hub">站群</span>
+      </a>
+
+      <div class="brand">
+        <h1 class="title">2048</h1>
+        <p class="sub" data-zh="憩想 · 小游戏" data-en="QX_t1me · Mini game">憩想 · 小游戏</p>
+      </div>
+
+      <div class="tools">
+        <button type="button" class="tool-btn" id="soundBtn" aria-pressed="false" aria-label="音效开关 / Sound">
+          <span id="soundIcon" aria-hidden="true">🔇</span>
+        </button>
+        <button type="button" class="tool-btn" id="langBtn" aria-label="切换语言 / Switch language">EN</button>
+        <button type="button" class="tool-btn" id="themeBtn" aria-label="切换明暗主题 / Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="hud">
+        <div class="scores">
+          <div class="score-box">
+            <span class="score-label" data-zh="分数" data-en="Score">分数</span>
+            <strong class="score-value" id="score">0</strong>
+            <span class="score-float" id="scoreFloat" aria-hidden="true"></span>
+          </div>
+          <div class="score-box score-box-alt">
+            <span class="score-label" data-zh="最高" data-en="Best">最高</span>
+            <strong class="score-value" id="best">0</strong>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="undoBtn" disabled>
+            <span data-zh="撤销" data-en="Undo">撤销</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="newBtn">
+            <span data-zh="新游戏" data-en="New game">新游戏</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="stage">
+        <div class="board" id="board">
+          <div class="cells" aria-hidden="true">
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          </div>
+
+          <div class="tiles" id="tiles"></div>
+
+          <div class="overlay" id="overlay" hidden>
+            <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+              <h2 class="overlay-title" id="ovTitle"></h2>
+              <p class="overlay-text" id="ovText"></p>
+              <div class="overlay-actions">
+                <button type="button" class="btn" id="ovKeep" hidden>
+                  <span data-zh="继续挑战" data-en="Keep going">继续挑战</span>
+                </button>
+                <button type="button" class="btn btn-primary" id="ovNew">
+                  <span data-zh="再来一局" data-en="Try again">再来一局</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="hint" data-zh="方向键 / WASD 移动，或手指滑动。" data-en="Arrows / WASD — or just swipe.">
+        方向键 / WASD 移动，或手指滑动。
+      </p>
+      <p class="keys" data-zh="R 重开 · C 撤销（手柄：十字键 · B 撤销 · Y 重开）" data-en="R restart · C undo (gamepad: D-pad · B undo · Y restart)">
+        R 重开 · C 撤销（手柄：十字键 · B 撤销 · Y 重开）
+      </p>
+
+      <details class="rules">
+        <summary data-zh="玩法" data-en="How to play">玩法</summary>
+        <p data-zh="相同数字相撞时合并成它们的和；每次移动后，空白处会随机出现一个 2（偶尔是 4）。合成 2048 即达成目标，也可以继续往上叠。当棋盘填满且四向都动不了时，本局结束。"
+           data-en="Tiles with the same number merge into their sum. After every move a new 2 (sometimes a 4) appears in a random empty cell. Reach 2048 to win — or keep stacking. The game ends when the board is full and no direction moves anything.">
+          相同数字相撞时合并成它们的和；每次移动后，空白处会随机出现一个 2（偶尔是 4）。合成 2048 即达成目标，也可以继续往上叠。当棋盘填满且四向都动不了时，本局结束。
+        </p>
+      </details>
+
+      <footer class="foot">
+        <span>憩想 · QX_t1me</span>
+        <span class="dot" aria-hidden="true">·</span>
+        <a href="https://github.com/QIXIANG-258" target="_blank" rel="noopener">GitHub</a>
+      </footer>
+    </main>
+
+    <noscript>
+      <p class="noscript">这个游戏需要 JavaScript 才能运行。/ This game needs JavaScript.</p>
+    </noscript>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>
