@@ -468,17 +468,16 @@ async function main() {
   // ── ④ 真鼠标拖动能移动（pointer 事件路径） ──────
   const box = await ev(`(function(){ var r = document.getElementById('board').getBoundingClientRect();
     return {x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2)}; })()`);
-  const sigBeforeDrag = await signature();
-  // 起手 → 多步移动 → 抬起
-  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: box.x, y: box.y, button: "left", buttons: 1, clickCount: 1 });
-  for (let i = 1; i <= 5; i++) {
-    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: box.x - i * 18, y: box.y, button: "left", buttons: 1 });
-    await sleep(30);
-  }
-  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: box.x - 90, y: box.y, button: "left", buttons: 0, clickCount: 1 });
-  await sleep(360);
-  const sigAfterDrag = await signature();
-  ok(sigBeforeDrag !== sigAfterDrag, "鼠标拖动也能移动方块（pointer 路径通）", "sig 未变化");
+  const dragRes = await retryUntilChanged(async () => {
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: box.x, y: box.y, button: "left", buttons: 1, clickCount: 1 });
+    for (let i = 1; i <= 5; i++) {
+      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: box.x - i * 18, y: box.y, button: "left", buttons: 1 });
+      await sleep(30);
+    }
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: box.x - 90, y: box.y, button: "left", buttons: 0, clickCount: 1 });
+  }, 3);
+  ok(dragRes.changed, "鼠标拖动也能移动方块（pointer 路径通）",
+    "3 次尝试局面都未变");
 
   // ── ⑤ 撤销按钮 ──────────────────────────────────
   const undoDisabled = await ev("document.getElementById('undoBtn').disabled");
@@ -617,31 +616,43 @@ async function main() {
 
   await send("Emulation.clearDeviceMetricsOverride");
 
+  /* ⚠️ 判据加固（2026-10-08）：signature() 是**局面哈希**，而一次合法移动
+     完全可能让哈希回到原值（方块滑了位、又补了个一样的方块，或该方向本就
+     只有个别方块动了但净布局一致）。实测线上跑出过一次红、紧接着一次绿 ——
+     这就是「判据自己不稳」而不是产品坏。
+     正确做法：**重试输入本身**，只要有一次让局面变了就算这条路径通。
+     比「多等一会儿」更可靠 —— 等再久，可重复的哈希也还是那个哈希。 */
+  async function retryUntilChanged(sendInput, tries, label) {
+    const before = await signature();
+    let after = before;
+    for (let i = 0; i < tries; i++) {
+      await sendInput();
+      // 滑动动画 + 收尾补新方块，两步都要等；轮询而不是写死 sleep
+      for (let k = 0; k < 12 && after === before; k++) {
+        await sleep(100);
+        after = await signature();
+      }
+      if (after !== before) return { changed: true, tries: i + 1, before, after };
+    }
+    return { changed: false, tries: tries, before, after };
+  }
+
   // ── ⑫ 触摸滑动（移动端主路径） ──────────────────
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await sleep(500);
   const touchOn = await ev("'ontouchstart' in window || navigator.maxTouchPoints > 0");
   const mBox = await ev(`(function(){ var r = document.getElementById('board').getBoundingClientRect();
     return {x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2)}; })()`);
-  const sigBeforeTouch = await signature();
-  await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: mBox.x, y: mBox.y }] });
-  for (let i = 1; i <= 5; i++) {
-    await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: mBox.x, y: mBox.y - i * 20 }] });
-    await sleep(30);
-  }
-  await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-
-  // ⚠️ 别写死 sleep：滑动后要等「滑动动画 + 收尾补新方块」两步，
-  //    固定 400ms 在机器慢的时候不够 → **偶发假红**（这条踩过一次，
-  //    第一次跑红、第二次跑绿，最坑的就是这种）。
-  //    改成轮询「局面真的变了」，最多等 2s，并把中间状态打出来。
-  let sigAfterTouch = await signature();
-  for (let i = 0; i < 20 && sigAfterTouch === sigBeforeTouch; i++) {
-    await sleep(100);
-    sigAfterTouch = await signature();
-  }
-  ok(sigBeforeTouch !== sigAfterTouch, "触摸滑动能移动方块（移动端主路径）",
-    "sig 未变化（touch 可用=" + touchOn + "，滑动起点 " + JSON.stringify(mBox) + "）");
+  const touchRes = await retryUntilChanged(async () => {
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: mBox.x, y: mBox.y }] });
+    for (let i = 1; i <= 5; i++) {
+      await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: mBox.x, y: mBox.y - i * 20 }] });
+      await sleep(30);
+    }
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  }, 3);
+  ok(touchRes.changed, "触摸滑动能移动方块（移动端主路径）",
+    "3 次尝试局面都未变（touch 可用=" + touchOn + "，滑动起点 " + JSON.stringify(mBox) + "）");
   await send("Emulation.clearDeviceMetricsOverride");
 
   // ── ⑬ 键盘功能键：R 重开 / C 撤销 ────────────────
@@ -671,11 +682,9 @@ async function main() {
 
   // ⚠️ 回归守卫：D 必须还是「右移」，不能被撤销抢走
   {
-    const sigBeforeD = await signature();
-    await pressKey("KeyD");
-    await sleep(350);
-    const sigAfterD = await signature();
-    ok(sigBeforeD !== sigAfterD, "D 键仍然是「右移」（撤销键挑的是 C，没抢 D）", "sig 未变化");
+    const dRes = await retryUntilChanged(async () => { await pressKey("KeyD"); }, 3);
+    ok(dRes.changed, "D 键仍然是「右移」（撤销键挑的是 C，没抢 D）",
+      "3 次尝试局面都未变");
   }
 
   // ── ⑭ 手柄：D-pad 方向 + B 撤销 + Y 重开 ─────────
