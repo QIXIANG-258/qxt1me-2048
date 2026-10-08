@@ -119,12 +119,17 @@ function parse(on) {
       var tilesEl = document.getElementById('tiles');
       var out = {};
       vals.forEach(function(v){
+        // ⚠️ 方块是两层结构：.tile（位移）+ .tile-inner（外观）。
+        //    配色挂在 .tile-inner 上 —— 量 .tile 会拿到**透明背景**，
+        //    于是每个数值都算出同一个"空格色"，三条判据全假红
+        //    （2026-10-08 分层重构后就是这样误报过一轮）。
         var t = document.createElement('div');
         t.className = 'tile';
         t.dataset.v = String(v);
-        t.innerHTML = '<span class="tile-face">' + v + '</span>';
+        t.innerHTML = '<div class="tile-inner"><span class="tile-face">' + v + '</span></div>';
         tilesEl.appendChild(t);
-        var cs = getComputedStyle(t);
+        var inner = t.firstChild;
+        var cs = getComputedStyle(inner);
         out[v] = { bg: toRGB(cs.backgroundColor), fg: toRGB(cs.color) };
         tilesEl.removeChild(t);
       });
