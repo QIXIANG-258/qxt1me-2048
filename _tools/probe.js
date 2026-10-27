@@ -31,6 +31,45 @@ function ok(cond, name, extra) {
   else { fail++; fails.push(name); console.log("  ✗ " + name + (extra ? "  → " + extra : "")); }
 }
 
+/* robots.txt 分组解析（2026-10-27）。
+   为什么不是一行正则：Cloudflare 会在站点自己的 robots.txt 前面注入一段
+   Managed content（`# BEGIN Cloudflare Managed content`，31 组
+   `User-agent: <训练类爬虫>` + `Disallow: /`，五站全有）。
+   「文件里有 Disallow: /」不等于「整站被挡」——要按规范分组，只看
+   `User-agent: *` 那一组是否只 Disallow 不 Allow。 */
+function parseRobotsGroups(t) {
+  const groups = [];
+  let cur = null;
+  for (const raw of String(t).split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, "").trim();
+    if (!line) continue;
+    const m = /^([A-Za-z-]+)\s*:\s*(.*)$/.exec(line);
+    if (!m) continue;
+    const k = m[1].toLowerCase();
+    const v = m[2].trim();
+    if (k === "user-agent") {
+      if (cur && cur.rules.length) { groups.push(cur); cur = null; }
+      if (!cur) cur = { agents: [], rules: [] };
+      cur.agents.push(v.toLowerCase());
+    } else if (k === "allow" || k === "disallow") {
+      if (!cur) cur = { agents: [], rules: [] };
+      cur.rules.push({ allow: k === "allow", path: v });
+    }
+  }
+  if (cur) groups.push(cur);
+  return groups;
+}
+
+function starGroupBlocksAll(t) {
+  const stars = parseRobotsGroups(t).filter((g) => g.agents.indexOf("*") >= 0);
+  if (!stars.length) return true;
+  return stars.some(function (g) {
+    const dis = g.rules.some((r) => !r.allow && r.path === "/");
+    const all = g.rules.some((r) => r.allow && r.path === "/");
+    return dis && !all;
+  });
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── 极简 WebSocket 客户端（够跑 CDP 就行） ──────────
@@ -366,7 +405,15 @@ async function main() {
     const rt = rob.body || "";
     ok(/User-agent:\s*\*/i.test(rt), "robots.txt 有 User-agent: *");
     ok(/Allow:\s*\//i.test(rt), "robots.txt 允许抓取（Allow: /）");
-    ok(!/^\s*Disallow:\s*\/\s*$/im.test(rt), "robots.txt 没有 Disallow: /（否则整站被挡）");
+    /* 🔴 2026-10-27 修：原来是 `/^\s*Disallow:\s*\/\s*$/im` 取反 —— 文件里
+       只要出现任何一条 `Disallow: /` 就判红。实测线上 robots.txt 已被
+       Cloudflare 的 Managed content 在**头部**注入 31 条 `Disallow: /`
+       （Amazonbot / GPTBot / CCBot / Bytespider 等训练类爬虫各一组），
+       我们自己那一组 `User-agent: * / Allow: /` 在文件末尾照旧生效。
+       旧判据于是在「人和搜索引擎完全可抓」的正常站点上报红 —— 假红。
+       改为按 robots 规范分组，只看 `User-agent: *` 组有没有被整站挡死。 */
+    ok(!starGroupBlocksAll(rt), "robots.txt 没有把 User-agent: * 整站挡死（分组解析，不是字符串搜索）",
+       "Disallow:/ 总条数=" + (rt.match(/^\s*Disallow:\s*\/\s*$/gim) || []).length);
     ok(/Sitemap:\s*https:\/\/2048\.qxt1me\.dpdns\.org\/sitemap\.xml/.test(rt),
        "robots.txt 声明了本站的 sitemap（绝对 https 地址）",
        JSON.stringify(rt.replace(/\s+/g, " ").slice(0, 100)));
