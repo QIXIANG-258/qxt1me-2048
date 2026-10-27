@@ -9,6 +9,26 @@
     <meta name="robots" content="index, follow" />
     <title>2048 · 憩想</title>
 
+    <!-- 索引与分享元信息（2026-10-27 补 —— 此前本站 canonical / og:* 实测全 0，
+         是五站里唯一一个。缺 canonical 时站群内多域名互链会被判成重复内容；
+         缺 og:* 时分享出去只有一条裸链接，没有标题和摘要。） -->
+    <link rel="canonical" href="https://2048.qxt1me.dpdns.org/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="憩想" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:title" content="2048 · 憩想" />
+    <meta property="og:description" content="2048 — 憩想站群的小游戏：方向键或手指滑动，把相同数字合成 2048。" />
+    <meta property="og:url" content="https://2048.qxt1me.dpdns.org/" />
+    <!-- 本站没有 1200×630 的横版卡片图，用现成的方形图标（512×512）：
+         方形图必须配 twitter:card=summary，配 summary_large_image 会被平台裁掉两翼。 -->
+    <meta property="og:image" content="https://2048.qxt1me.dpdns.org/icon-512.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="2048 · 憩想" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:image" content="https://2048.qxt1me.dpdns.org/icon-512.png" />
+
     <!-- 站点图标（2026-10-08）：
          favicon.ico 多分辨率（16/32/48）；iOS / 安卓「添加到主屏幕」走 apple-touch。
          manifest.webmanifest 让手机 PWA 安装时也用同一套图。 -->

@@ -383,6 +383,64 @@ async function main() {
        "实测 " + (st.match(/<loc>/g) || []).length + " 条");
   }
 
+  // ── ②d canonical / OG / twitter（2026-10-27 补）──────────────────
+  // 本站此前这一组实测**全 0**，是五站里唯一一个完全没有索引与分享元信息的。
+  // 缺陷为什么长期看不见：这些 meta 一个都不上屏，页面照常渲染、零报错，
+  // 只有分享出去才会发现「只有一条裸链接」。所以判据只能靠解析 head。
+  {
+    const m = await ev(`(function(){
+      var get = function(sel){ var e = document.querySelector(sel); return e ? e.getAttribute('content') : null; };
+      var can = document.querySelector('link[rel="canonical"]');
+      return {
+        canonical: can ? can.getAttribute('href') : null,
+        type: get('meta[property="og:type"]'),
+        site: get('meta[property="og:site_name"]'),
+        locale: get('meta[property="og:locale"]'),
+        title: get('meta[property="og:title"]'),
+        desc: get('meta[property="og:description"]'),
+        url: get('meta[property="og:url"]'),
+        image: get('meta[property="og:image"]'),
+        iw: get('meta[property="og:image:width"]'),
+        ih: get('meta[property="og:image:height"]'),
+        tw: get('meta[name="twitter:card"]'),
+        twImg: get('meta[name="twitter:image"]'),
+        // 属性被裸引号截断的痕迹：meta 上出现白名单外的属性名
+        weird: [].concat.apply([], [].map.call(document.querySelectorAll('meta'),
+          function(e){ return [].map.call(e.attributes, function(a){ return a.name; })
+            .filter(function(n){ return ['property','name','content','charset','http-equiv','media'].indexOf(n) < 0; }); })),
+      };
+    })()`);
+    ok(m.canonical === 'https://2048.qxt1me.dpdns.org/',
+       "canonical 指向本站首页（绝对地址、带结尾斜杠）", JSON.stringify(m.canonical));
+    ok(m.url === m.canonical, "og:url 与 canonical 完全一致", m.url + " vs " + m.canonical);
+    ok(['website', 'article'].indexOf(m.type) >= 0, "og:type 是 website/article",
+       JSON.stringify(m.type));
+    ok(!!m.title && !!m.desc, "og:title / og:description 都不为空",
+       JSON.stringify({ t: m.title, d: m.desc }));
+    ok(m.locale === 'zh_CN', "og:locale = zh_CN", JSON.stringify(m.locale));
+    ok(/^https:\/\/2048\.qxt1me\.dpdns\.org\/icon-512\.png$/.test(m.image || ''),
+       "og:image 是绝对 https 地址、指向本站方形图标", JSON.stringify(m.image));
+    // ⚠️ 配对判据：方形图（1:1）必须配 summary。配 summary_large_image 会被
+    //    平台按 1.91:1 横向裁切 —— 图还在，但上下被切掉一半，属于"能跑但难看"。
+    ok(m.iw === m.ih && m.tw === 'summary',
+       "方形分享图配 twitter:card=summary（横版图才配 summary_large_image）",
+       JSON.stringify({ w: m.iw, h: m.ih, tw: m.tw }));
+    ok(m.twImg === m.image, "twitter:image 与 og:image 一致", JSON.stringify(m.twImg));
+    ok(m.weird.length === 0, "meta 属性未被裸引号截断", JSON.stringify(m.weird.slice(0, 3)));
+    // 图必须真的能取到（指向一个 404 的图，元信息看着完全正常）
+    const ogPng = await ev(`(async function(){
+      try {
+        var r = await fetch('/icon-512.png');
+        var b = new Uint8Array(await r.arrayBuffer());
+        var dv = new DataView(b.buffer);
+        return { status: r.status, ct: r.headers.get('content-type'),
+                 png: b[0]===0x89 && b[1]===0x50, w: dv.getUint32(16), h: dv.getUint32(20) };
+      } catch (e) { return { error: String(e) }; }
+    })()`);
+    ok(ogPng.status === 200 && ogPng.png === true && ogPng.w === 512 && ogPng.h === 512,
+       "og:image 指向的 PNG 真实存在且是 512×512", JSON.stringify(ogPng));
+  }
+
   // ── ②b 配色可辨性（2026-10-07 加）────────────────
   // 🔴 起因：作者反馈"方块容易和背景融为一体"。实测根因是数值 2 的
   //    底色 rgb(33,33,33) 与空格 rgb(32,32,32) 几乎同色，而 2 是棋盘上
