@@ -661,7 +661,6 @@ html[data-theme="light"] .tile[data-v="2048"] .tile-inner {
   font-size: 11px;
   color: rgb(var(--ink-3-rgb));
   letter-spacing: .04em;
-  opacity: .78;
 }
 
 .rules {
