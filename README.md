@@ -99,6 +99,14 @@ node _tools/check_contrast.js  # 配色量化（方块 vs 空格的亮度差）
 > `parseRobotsGroups()` / `starGroup()`，只断言 `User-agent: *` 那一组没被挡死。
 > 2026-10-27 修。
 
+> **2026-10-28 现状更新：CF 的 Managed robots 注入已经没有了。**
+> 五站线上 `robots.txt` 与本地源文件**逐字节完全一致**（blog 460 B / universe 240 B /
+> gear 327 B / 2048 340 B / gis 74 B，`Buffer.equals` 全 true，连跑 3 轮无变化，
+> 带 Baiduspider UA 抓首页也是 200）—— 上面记的「注入 2.6 KB」是**当时**的事实，
+> 现在那块内容已经撤掉了（CF 控制台的 AI Crawl Control / Managed robots 开关）。
+> **判据不要跟着回退**：按 `User-agent` 分组解析仍然是对的写法 —— 平台将来
+> 再注入一次，分组判据不会假红，全文正则判据会。
+
 ## 部署
 
 与 `02-universe` / `03-gear` **同形态**：无构建步骤，`src/` 即产物。
