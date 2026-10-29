@@ -14,7 +14,7 @@
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-2u9Q9r3Nokz+7U2bEWVQcgT6cgcWJKRvL+hSXuuv7zs=' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com 'sha256-0Myus/HKVsFlBDBA132uFQk1/JrEE3cN66cR4OW6ZG0=' 'sha256-2u9Q9r3Nokz+7U2bEWVQcgT6cgcWJKRvL+hSXuuv7zs='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
 
 # ↓ 以下是缓存策略，规则之间互不重叠
 
@@ -26,14 +26,21 @@
 /fonts/*.woff2
   Cache-Control: public, max-age=31536000, immutable
 
-# css/js：文件名固定，且 index.html 是**裸引用**（不带 ?v= 指纹），
-# 所以不能用 immutable（否则改版后访客永远刷不掉），给 300s：
-# 作者改完刷新几次就能看到，代价只是一天几次的 304 协商。
+# css/js：**已改成带内容指纹**（2026-10-29，kimi 报告 O-03）。
+# index.html / 404.html 的引用现在是 `css/style.css?v=41d61304e1` 这种形态，
+# 指纹由 `项目要点/04-站群工具/fingerprint_assets.py` 按文件 sha1 前 10 位生成。
+#
+# 🔑 顺序不能反：**先让 URL 随内容变，再把缓存放到一年**。
+# 反过来做（先长缓存、后补指纹）中间那段窗口里，改了内容的老访客会永远吃旧版
+# 且没有任何报错 —— 这正是原先不敢开 immutable、只能给 300s 的原因。
+#
+# ⚠️ 改完 css/js 必须重跑一次 fingerprint_assets.py，否则 URL 不变、
+#    浏览器还在用一年缓存 → 等于「改了没生效」，排查起来极费时间。
 /css/*
-  Cache-Control: public, max-age=300
+  Cache-Control: public, max-age=31536000, immutable
 
 /js/*
-  Cache-Control: public, max-age=300
+  Cache-Control: public, max-age=31536000, immutable
 
 # 说明：index.html / 404.html 故意**不写规则** ——
 # 它们落 Cloudflare 默认的 `public, max-age=0, must-revalidate`，

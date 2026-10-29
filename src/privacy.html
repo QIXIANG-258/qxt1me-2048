@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隐私说明 · 2048 · 憩想</title>
+<meta name="description" content="2048 · 憩想 的隐私说明：本站不收集个人信息、不设 Cookie、不接第三方统计 SDK。">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#0f0f0f">
+<link rel="canonical" href="https://2048.qxt1me.dpdns.org/privacy">
+<style>
+/* 这一页刻意**自带样式、不引站点 CSS**：
+   五站的样式变量与字体各不相同，共用一份才能保证「统一」；
+   而它又只有一屏文字，不需要站点那套栅格与动效。 */
+:root{
+  color-scheme: dark light;
+  --bg:#0f0f0f; --card:#181818; --ink:#f2f1ed; --ink2:#b5b4ae; --ink3:#8a897f;
+  --line:rgba(255,255,255,.14); --accent:#e2ba6a;
+  --f:"PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{ --bg:#f0eeea; --card:#fbfaf8; --ink:#161616; --ink2:#5c5b56; --ink3:#68675f;
+          --line:rgba(20,20,20,.16); --accent:#8a6a24; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);
+      font-size:15.5px;line-height:1.85;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:56px clamp(20px,5vw,40px) 96px}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+      flex-wrap:wrap;margin-bottom:40px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.brand{font-size:14px;letter-spacing:.06em;color:var(--ink2);text-decoration:none}
+.brand:hover{color:var(--ink)}
+.back{font-size:13.5px;color:var(--ink2);text-decoration:none;
+       border-bottom:1px solid var(--line);padding-bottom:2px}
+.back:hover{color:var(--ink)}
+h1{font-size:clamp(24px,3.4vw,32px);font-weight:600;letter-spacing:.02em;margin:0 0 10px}
+.lede{color:var(--ink2);margin:0 0 34px;font-size:15px}
+h2{font-size:16px;font-weight:600;letter-spacing:.04em;margin:38px 0 12px;
+    padding-left:11px;border-left:2px solid var(--accent)}
+p{margin:0 0 12px}
+ul{margin:0 0 14px;padding-left:20px}
+li{margin:0 0 7px}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.88em;
+      background:rgba(127,127,127,.16);padding:1px 5px;border-radius:3px}
+table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink2);font-size:13px;letter-spacing:.05em;white-space:nowrap}
+td.k{white-space:nowrap;color:var(--ink2)}
+.yes{color:var(--accent);font-weight:600}
+.note{color:var(--ink3);font-size:13.5px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:6px;
+      padding:16px 18px;margin:0 0 18px}
+.box p:last-child{margin-bottom:0}
+.foot{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);
+       color:var(--ink3);font-size:13.5px}
+.foot a{color:var(--ink2);text-decoration:none;border-bottom:1px solid var(--line)}
+.foot a:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">2048 · 憩想</a>
+    <a class="back" href="/">← 回首页</a>
+  </div>
+
+  <h1>隐私说明</h1>
+  <p class="lede">一句话：这个站不收集你的个人信息 —— 没有账号、没有 Cookie、
+     没有第三方统计 SDK，也没有自建埋点。</p>
+
+  <h2>不做的四件事</h2>
+  <ul>
+    <li>不设 Cookie。全站零 Cookie，所以不需要弹同意横幅。</li>
+    <li>不接第三方统计 SDK（Google Analytics、百度统计、友盟之类一个都没有）。</li>
+    <li>不画像、不做广告投放、不把任何数据卖给或转给第三方。</li>
+    <li>不要求注册登录 —— 没有账号体系，也就没有「注销账号」这件事。</li>
+  </ul>
+
+  <h2>确实会用到的外部请求</h2>
+  <p class="note">下面这些是实测出来的全部，没有省略项。</p>
+  <table>
+    <thead><tr><th>域名</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>static.cloudflareinsights.com</code></td><td>Cloudflare Web Analytics 的统计脚本。托管平台自带，无 Cookie、不跨站追踪、不刻画个人。</td></tr>
+    </tbody>
+  </table>
+
+  <h2>存在你自己浏览器里的东西</h2>
+  <p>下面这些存在你浏览器的本地存储里，<strong>不会上传到服务器</strong>，
+     清掉浏览器数据就没了。它们只是让下次打开时还是你习惯的样子。</p>
+  <table>
+    <thead><tr><th>位置</th><th>键名</th><th>存的是什么</th></tr></thead>
+    <tbody>
+      <tr><td class="k">localStorage</td><td class="k"><code>g2048Theme</code></td><td>深色 / 浅色主题</td></tr>
+      <tr><td class="k">localStorage</td><td class="k"><code>g2048Lang</code></td><td>界面语言</td></tr>
+      <tr><td class="k">localStorage</td><td class="k"><code>g2048Sound</code></td><td>音效开关</td></tr>
+      <tr><td class="k">localStorage</td><td class="k"><code>g2048Best</code></td><td>最高分</td></tr>
+      <tr><td class="k">localStorage</td><td class="k"><code>g2048State</code></td><td>没下完的棋局</td></tr>
+    </tbody>
+  </table>
+  <h2>棋局与最高分</h2>
+  <div class="box"><p>都存在你自己浏览器的 localStorage 里，**没有账号、没有服务器存档** ——换一台设备或清掉浏览器数据，进度就没了。我们这边看不到你的分数。</p></div>
+
+  <h2>托管与访问日志</h2>
+  <p>本站托管在 Cloudflare 上。作为托管商，Cloudflare 会为提供服务而处理
+     请求层面的数据（IP、时间、请求路径等），这是任何网站都绕不开的基础设施
+     行为，具体规则见
+     <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare 的隐私政策</a>。
+     我们这边能看到的只有<strong>聚合后的访问量</strong>（比如「今天有多少次浏览」），
+     看不到某一个人访问了哪些页面。</p>
+
+  <h2>点出去以后</h2>
+  <p>站内的外部链接（GitHub、Pexels、各类数据源等）点开后就是别人的网站了，
+     那边适用它们自己的隐私政策，不在本页范围内。</p>
+
+  <h2>English summary</h2>
+  <p class="note">No accounts, no cookies, no third-party analytics SDK, no
+     profiling. The only external request is Cloudflare's own aggregate
+     analytics beacon (cookieless). Preferences such as theme and language are
+     stored in your browser's local storage and never uploaded. Everything else
+     is described above in Chinese.</p>
+
+  <div class="foot">
+    <p>本页最后更新：2026-10-29　·　有疑问可以联系：<a href="https://github.com/QIXIANG-258">GitHub</a></p>
+  </div>
+
+</div>
+</body>
+</html>
